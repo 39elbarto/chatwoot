@@ -316,6 +316,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_05_15_000000) do
     t.text "content"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.string "content_format", default: "markdown", null: false
   end
 
   create_table "captain_assistant_responses", force: :cascade do |t|
