@@ -62,6 +62,7 @@ import {
   calculateMenuPosition,
   getEffectiveChannelType,
   stripUnsupportedFormatting,
+  serializePlainTextMessage,
 } from 'dashboard/helper/editorHelper';
 import {
   hasPressedEnterAndNotCmdOrShift,
@@ -224,6 +225,10 @@ const handleCopilotAction = actionKey => {
 
 const contentFromEditor = () => {
   return MessageMarkdownSerializer.serialize(editorView.state.doc);
+};
+
+const plainTextFromEditor = () => {
+  return serializePlainTextMessage(editorView.state.doc);
 };
 
 const shouldShowVariables = computed(() => {
@@ -828,7 +833,10 @@ onMounted(() => {
   }
 });
 
-defineExpose({ focusEditorInputField });
+defineExpose({
+  focusEditorInputField,
+  getPlainTextContent: plainTextFromEditor,
+});
 
 // BUS Event to insert text or markdown into the editor at the
 // current cursor position.
