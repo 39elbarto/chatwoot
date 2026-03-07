@@ -19,6 +19,7 @@ import {
   stripInlineBase64Images,
   stripUnsupportedFormatting,
   stripUnsupportedMarkdown,
+  serializePlainTextMessage,
 } from '../editorHelper';
 
 // Define a basic ProseMirror schema
@@ -142,6 +143,26 @@ describe('appendSignature', () => {
       const { body, signature } = HAS_SIGNATURE[key];
       expect(appendSignature(body, signature)).toBe(body);
     });
+  });
+});
+
+describe('serializePlainTextMessage', () => {
+  it('preserves blank paragraphs without markdown escape artifacts', () => {
+    const doc = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text('Первая строка')]),
+      schema.node('paragraph'),
+      schema.node('paragraph', null, [
+        schema.text('Вторая строка после пустой строки'),
+      ]),
+      schema.node('paragraph'),
+      schema.node('paragraph', null, [schema.text('- пункт один')]),
+      schema.node('paragraph'),
+      schema.node('paragraph', null, [schema.text('- пункт два')]),
+    ]);
+
+    expect(serializePlainTextMessage(doc)).toBe(
+      'Первая строка\n\nВторая строка после пустой строки\n\n- пункт один\n\n- пункт два'
+    );
   });
 });
 
