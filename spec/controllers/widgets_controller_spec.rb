@@ -15,6 +15,20 @@ describe '/widget', type: :request do
       expect(response.body).not_to include(token)
     end
 
+    it 'allows embedding from configured website origins without X-Frame-Options conflict' do
+      web_widget.update!(
+        allowed_domains: 'https://www.levilaser.com, https://preview-stitch-fixed-layout.levilaser-site.pages.dev'
+      )
+
+      get widget_url(website_token: web_widget.website_token)
+
+      expect(response).to be_successful
+      expect(response.headers['Content-Security-Policy']).to eq(
+        'frame-ancestors https://www.levilaser.com https://preview-stitch-fixed-layout.levilaser-site.pages.dev'
+      )
+      expect(response.headers['X-Frame-Options']).to be_blank
+    end
+
     it 'renders the page correctly when called with website_token and cw_conversation' do
       get widget_url(website_token: web_widget.website_token, cw_conversation: token)
       expect(response).to be_successful
