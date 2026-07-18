@@ -26,7 +26,6 @@ import { CMD_AI_ASSIST } from 'dashboard/helper/commandbar/events';
 import {
   getMessageVariables,
   getUndefinedVariablesInMessage,
-  replaceVariablesInMessage,
 } from '@chatwoot/utils';
 import WhatsappTemplates from './WhatsappTemplates/Modal.vue';
 import ContentTemplates from './ContentTemplates/ContentTemplatesModal.vue';
@@ -927,39 +926,8 @@ export default {
       });
       this.hideContentTemplatesModal();
     },
-    replaceText(message) {
-      const replacement =
-        typeof message === 'object' && message !== null
-          ? message
-          : { text: message, format: null };
-
-      this.nextMessageFormat = replacement.format || null;
-      message = replacement.text || '';
-
-      if (this.sendWithSignature && !this.private) {
-        // if signature is enabled, append it to the message
-        // appendSignature ensures that the signature is not duplicated
-        // so we don't need to check if the signature is already present
-        const effectiveChannelType = getEffectiveChannelType(
-          this.channelType,
-          this.inbox?.medium || ''
-        );
-        message = appendSignature(
-          message,
-          this.messageSignature,
-          effectiveChannelType
-        );
-      }
-
-      const updatedMessage = replaceVariablesInMessage({
-        message,
-        variables: this.messageVariables,
-      });
-
-      setTimeout(() => {
-        useTrack(CONVERSATION_EVENTS.INSERTED_A_CANNED_RESPONSE);
-        this.message = updatedMessage;
-      }, 100);
+    setNextMessageFormat(content) {
+      this.nextMessageFormat = content?.format || null;
     },
     setReplyMode(mode = REPLY_EDITOR_MODES.REPLY) {
       // Clear attachments when switching between private note and reply modes
@@ -1431,9 +1399,7 @@ export default {
           @toggle-user-mention="toggleUserMention"
           @toggle-canned-menu="toggleCannedMenu"
           @toggle-variables-menu="toggleVariablesMenu"
-          @insert-canned-response="
-            content => (nextMessageFormat = content?.format || null)
-          "
+          @insert-canned-response="setNextMessageFormat"
           @clear-selection="clearEditorSelection"
           @execute-copilot-action="executeCopilotAction"
         />
