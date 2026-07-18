@@ -2,6 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import ReplyBox from '../ReplyBox.vue';
 
 describe('ReplyBox plain text mode', () => {
+  it('tracks the selected canned response format', () => {
+    const ctx = { nextMessageFormat: null };
+
+    ReplyBox.methods.setNextMessageFormat.call(ctx, { format: 'plain_text' });
+    expect(ctx.nextMessageFormat).toBe('plain_text');
+
+    ReplyBox.methods.setNextMessageFormat.call(ctx, { format: null });
+    expect(ctx.nextMessageFormat).toBe(null);
+  });
+
   it('prioritizes manual plain text mode over canned response format', () => {
     const ctx = {
       isPlainTextMode: true,

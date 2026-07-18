@@ -103,6 +103,7 @@ const emit = defineEmits([
   'typingOff',
   'toggleUserMention',
   'toggleCannedMenu',
+  'insertCannedResponse',
   'toggleVariablesMenu',
   'toggleToolsMenu',
   'clearSelection',
@@ -691,6 +692,10 @@ function insertContentIntoEditor(content, defaultFrom = 0) {
 function insertSpecialContent(type, content) {
   if (!editorView) {
     return;
+  }
+
+  if (type === 'cannedResponse') {
+    emit('insertCannedResponse', content);
   }
 
   let { node, from, to } = getContentNode(
