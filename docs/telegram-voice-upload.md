@@ -1,6 +1,7 @@
 # Telegram audio upload fix
 
-Prepared on 2026-10-23 for LeviLaser; not deployed by this change.
+Prepared and deployed on 2026-10-23 for LeviLaser after explicit owner approval.
+The application-code change is commit `b30e759e1358fb798366a9e3f7826c841cee3817`.
 
 ## Behavior
 
@@ -79,7 +80,7 @@ Ruby lint; a newer RuboCop conflicts with its custom `OneClassPerFile` cop.
 
 ## Authorized rollout and rollback
 
-Production remains unchanged until rollout approval, as required by the infra
+For future deployments, obtain rollout approval as required by the infra
 deployment runbook. Before rollout, commit the task changes, agree a short
 Chatwoot restart/test window, and confirm Docker root filesystem free space on
 the actual deployment host. Publish a new, unused GHCR tag and record its digest;
@@ -112,3 +113,24 @@ Keep this rollback image available through the observation window; avoid global
 image pruning. Reapply the two-file patch and FFmpeg dependency when rebasing
 the LeviLaser fork onto a future upstream release, unless upstream already
 provides equivalent behavior.
+
+## Production outcome
+
+Both web and worker run `v4.16.1-plaincanned.2` at registry digest
+`sha256:ad09780d350191f01ab3232d68b8d836462f8f58327dcef765f08079c97b0ba9`.
+HTTP `/api` returns 200. A synthetic AAC fixture converted inside the running
+Rails application to mono 48 kHz Opus. Sidekiq reported one worker and empty
+queues. No outbound test messages were sent. No migrations ran; the migration
+count remained 157.
+
+The protected backup directory on Hetzner is
+`/var/backups/chatwoot/telegram-voice-b30e759e1-20261023/`. The PostgreSQL dump
+was restored and checked, and the old image was archived with gzip integrity
+verification. The first rollout automatically reverted because a truncated
+FFmpeg version probe raised SIGPIPE under pipefail; the probe was corrected
+and the same image then deployed successfully. The pruning timer is active.
+
+Automatic command review refused deletion of the isolated verification database
+`chatwoot_voice_verify_20261023`; it remains separate from production. No alternate
+deletion path was used. Source and infrastructure changes remain on separate
+task branches; neither integration branch was merged or pushed.
