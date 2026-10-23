@@ -1,0 +1,6 @@
+# Backend-only overlay: preserve the exact deployed frontend and existing customizations.
+FROM ghcr.io/39elbarto/levilaser-chatwoot:v4.16.1-plaincanned.1@sha256:1e16c1368d19ea96db57964ebedc56d17e486fc6dd088d5626c78914e373bc38
+USER root
+RUN apk add --no-cache ffmpeg
+COPY app/services/telegram/send_attachments_service.rb /app/app/services/telegram/send_attachments_service.rb
+COPY app/services/telegram/send_audio_service.rb /app/app/services/telegram/send_audio_service.rb

@@ -3,7 +3,7 @@ require 'faraday/multipart'
 # Telegram Attachment APIs: ref: https://core.telegram.org/bots/api#inputfile
 
 # Media attachments like photos, videos can be clubbed together and sent as a media group
-# Audio can be clubbed together and send as a media group, but can't be mixed with other types
+# Audio is uploaded directly; native/browser recordings are normalized to OGG/Opus voice notes.
 # Documents are sent individually
 
 # We are using `HTTP URL` to send media attachments, telegram will directly download the media from the URL and send it to the user.
@@ -39,7 +39,9 @@ class Telegram::SendAttachmentsService
   end
 
   def send_attachments(type, attachments)
-    if [:media, :audio].include?(type)
+    if type == :audio
+      Telegram::SendAudioService.new(message: message).perform(attachments)
+    elsif type == :media
       media_group_request(channel.chat_id(message), attachments, channel.reply_to_message_id(message))
     else
       send_individual_attachments(attachments)
@@ -51,7 +53,8 @@ class Telegram::SendAttachmentsService
 
     message.attachments.each do |attachment|
       type = attachment_type(attachment[:file_type])
-      attachment_data = { type: type, media: attachment.download_url, attachment: attachment }
+      attachment_data = { type: type, attachment: attachment }
+      attachment_data[:media] = attachment.download_url unless type == 'audio'
       case type
       when 'document'
         attachments_by_type[:document] << attachment_data
@@ -90,9 +93,9 @@ class Telegram::SendAttachmentsService
 
   def document_request(chat_id, attachment, reply_to_message_id)
     temp_file_path = save_attachment_to_tempfile(attachment[:attachment])
-    response = send_file(chat_id, temp_file_path, reply_to_message_id)
-    File.delete(temp_file_path)
-    response
+    send_file(chat_id, temp_file_path, reply_to_message_id)
+  ensure
+    File.delete(temp_file_path) if temp_file_path && File.exist?(temp_file_path)
   end
 
   # Telegram picks up the file name from original field name, so we need to save the file with the original name.
@@ -111,16 +114,17 @@ class Telegram::SendAttachmentsService
     temp_file_path
   end
 
-  def send_file(chat_id, file_path, reply_to_message_id)
+  def send_file(chat_id, file_path, reply_to_message_id, **options)
     File.open(file_path, 'rb') do |file|
-      file_name = File.basename(file_path)
-      mime_type = Marcel::MimeType.for(name: file_name) || 'application/octet-stream'
+      file_name = options[:filename] || File.basename(file_path)
+      mime_type = options[:content_type] || Marcel::MimeType.for(name: file_name) || 'application/octet-stream'
 
-      payload = { chat_id: chat_id, document: Faraday::Multipart::FilePart.new(file, mime_type, file_name) }
+      payload = { chat_id: chat_id }
+      payload[options.fetch(:field, :document)] = Faraday::Multipart::FilePart.new(file, mime_type, file_name)
       payload[:reply_to_message_id] = reply_to_message_id if reply_to_message_id
       payload.merge!(business_connection_body)
 
-      response = multipart_post_connection.post("#{channel.telegram_api_url}/sendDocument", payload)
+      response = multipart_post_connection.post("#{channel.telegram_api_url}/#{options.fetch(:method, 'sendDocument')}", payload)
       parse_faraday_response(response)
     end
   end

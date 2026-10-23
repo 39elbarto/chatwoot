@@ -15,6 +15,9 @@ RSpec.describe Telegram::SendAttachmentsService do
 
       stub_request(:post, "#{telegram_api_url}/sendDocument")
         .to_return(status: 200, body: { ok: true, result: { message_id: 'document' } }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      stub_request(:post, "#{telegram_api_url}/sendAudio")
+        .to_return(status: 200, body: { ok: true, result: { message_id: 'audio' } }.to_json, headers: { 'Content-Type' => 'application/json' })
     end
 
     it 'sends all types of attachments in seperate groups and returns the last successful message ID from the batch' do
@@ -22,8 +25,9 @@ RSpec.describe Telegram::SendAttachmentsService do
       result = service.perform
       expect(result).to eq('document')
       # videos and images are sent in a media group
-      # audio is sent in another group
-      expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).to have_been_made.times(2)
+      # audio is uploaded directly
+      expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).to have_been_made.once
+      expect(a_request(:post, "#{telegram_api_url}/sendAudio")).to have_been_made.once
       expect(a_request(:post, "#{telegram_api_url}/sendDocument")).to have_been_made.once
     end
 
@@ -50,7 +54,11 @@ RSpec.describe Telegram::SendAttachmentsService do
         service.perform
         expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")
           .with { |req| req.body =~ /business_connection_id.+eooW3KF5WB5HxTD7T826/m })
-          .to have_been_made.times(2)
+          .to have_been_made.once
+
+        expect(a_request(:post, "#{telegram_api_url}/sendAudio")
+          .with { |req| req.body =~ /business_connection_id.+eooW3KF5WB5HxTD7T826/m })
+          .to have_been_made.once
 
         expect(a_request(:post, "#{telegram_api_url}/sendDocument")
           .with { |req| req.body =~ /business_connection_id.+eooW3KF5WB5HxTD7T826/m })
@@ -78,10 +86,11 @@ RSpec.describe Telegram::SendAttachmentsService do
         message.save!
       end
 
-      it 'sends audio messages in single media group and returns the message ID' do
+      it 'uploads audio messages individually and returns the last message ID' do
         result = service.perform
-        expect(result).to eq('media')
-        expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).to have_been_made.once
+        expect(result).to eq('audio')
+        expect(a_request(:post, "#{telegram_api_url}/sendAudio")).to have_been_made.times(2)
+        expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).not_to have_been_made
       end
     end
 
@@ -93,10 +102,11 @@ RSpec.describe Telegram::SendAttachmentsService do
         message.save!
       end
 
-      it 'sends photos and videos in a media group and audio in a separate group' do
+      it 'sends photos and videos in a media group and uploads audio directly' do
         result = service.perform
-        expect(result).to eq('media')
-        expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).to have_been_made.times(2)
+        expect(result).to eq('audio')
+        expect(a_request(:post, "#{telegram_api_url}/sendMediaGroup")).to have_been_made.once
+        expect(a_request(:post, "#{telegram_api_url}/sendAudio")).to have_been_made.once
       end
     end
 
