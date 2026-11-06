@@ -1,0 +1,4 @@
+# Backend-only overlay; retain all deployed frontend and audio customizations.
+FROM ghcr.io/39elbarto/levilaser-chatwoot:v4.16.1-plaincanned.2@sha256:ad09780d350191f01ab3232d68b8d836462f8f58327dcef765f08079c97b0ba9
+COPY app/controllers/api/v1/accounts/conversations/messages_controller.rb /app/app/controllers/api/v1/accounts/conversations/messages_controller.rb
+COPY app/services/telegram/remove_message_service.rb /app/app/services/telegram/remove_message_service.rb

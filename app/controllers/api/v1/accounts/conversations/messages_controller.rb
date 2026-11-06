@@ -19,10 +19,15 @@ class Api::V1::Accounts::Conversations::MessagesController < Api::V1::Accounts::
   end
 
   def destroy
+    telegram_removal = Telegram::RemoveMessageService.new(message: message).perform
     ActiveRecord::Base.transaction do
-      message.update!(content: I18n.t('conversations.messages.deleted'), content_type: :text, content_attributes: { deleted: true })
+      attributes = { deleted: true }
+      attributes[:telegram_removal] = telegram_removal if telegram_removal
+      message.update!(content: I18n.t('conversations.messages.deleted'), content_type: :text, content_attributes: attributes)
       message.attachments.destroy_all
     end
+  rescue Telegram::RemoveMessageService::RemovalError => e
+    render_could_not_create_error(e.message)
   end
 
   def retry
